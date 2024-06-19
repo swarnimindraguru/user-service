@@ -20,7 +20,7 @@ import java.util.List;
 public class CustomUserDetails implements UserDetails {
     private String username;
     private String password;
-    private boolean accountNonExpire;
+    private boolean accountNonExpired;
     private boolean accountNonLocked;
     private boolean credentialsNonExpired;
     private boolean enabled;
@@ -35,7 +35,7 @@ public class CustomUserDetails implements UserDetails {
     public CustomUserDetails(User user){
         this.username = user.getEmail();
         this.password = user.getHashedPassword();
-        this.accountNonExpire = true;
+        this.accountNonExpired = true;
         this.accountNonLocked = true;
         this.credentialsNonExpired = true;
         this.enabled =true;
@@ -65,7 +65,7 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public boolean isAccountNonExpired() {
-        return accountNonExpire;
+        return accountNonExpired;
     }
 
     @Override
