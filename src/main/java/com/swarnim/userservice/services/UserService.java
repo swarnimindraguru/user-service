@@ -1,5 +1,7 @@
 package com.swarnim.userservice.services;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.swarnim.userservice.dtos.SendEmailMessageDto;
 import com.swarnim.userservice.exceptions.InvalidTokenException;
 import com.swarnim.userservice.exceptions.UserAlreadyExistException;
 import com.swarnim.userservice.exceptions.UserNotFoundException;
@@ -8,6 +10,8 @@ import com.swarnim.userservice.models.User;
 import com.swarnim.userservice.repositories.TokenRepository;
 import com.swarnim.userservice.repositories.UserRepository;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.kafka.common.network.Send;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -23,11 +27,15 @@ public class UserService {
     private BCryptPasswordEncoder bCryptPasswordEncoder;
     private UserRepository userRepository;
     private TokenRepository tokenRepository;
+    private KafkaTemplate<String, String> kafkaTemplate;
+    private ObjectMapper objectMapper;
 
-    UserService(BCryptPasswordEncoder bCryptPasswordEncoder,UserRepository userRepository,TokenRepository tokenRepository ){
+    UserService(BCryptPasswordEncoder bCryptPasswordEncoder,UserRepository userRepository,TokenRepository tokenRepository, KafkaTemplate<String, String> kafkaTemplate, ObjectMapper objectMapper ){
         this.bCryptPasswordEncoder = bCryptPasswordEncoder;
         this.userRepository = userRepository;
         this.tokenRepository = tokenRepository;
+        this.kafkaTemplate = kafkaTemplate;
+        this.objectMapper = objectMapper;
     }
 
     public User signUp(String name, String email, String password) {
@@ -42,7 +50,21 @@ public class UserService {
         user.setEmailVarified(true);
 
         //save the user obj to the db
-        return userRepository.save(user);
+        User savedUser =  userRepository.save(user);
+
+        SendEmailMessageDto messageDto = new SendEmailMessageDto();
+        messageDto.setTo(savedUser.getEmail());
+        messageDto.setSubject("!! Welcome User !!");
+        messageDto.setBody("Thank you for Signing Up. Hope you will have a great experience here.");
+        try{
+            kafkaTemplate.send(
+                    "sendEmail",
+                    objectMapper.writeValueAsString(messageDto)
+            );
+        } catch (Exception e){
+            System.out.println("Got some exceptions");
+        }
+                return savedUser;
     };
 
     public Token login(String email, String password) {
